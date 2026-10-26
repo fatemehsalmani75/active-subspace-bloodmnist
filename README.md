@@ -1,109 +1,95 @@
 # Active Subspace of Neural Networks on BloodMNIST
 
-Structural analysis, compression and universal adversarial attacks for a deep network trained on
-**BloodMNIST** (8 blood-cell classes), using **active subspaces**.
+<a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/bloodmnist_active_subspace.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-This is an independent, from-scratch **PyTorch re-implementation** written by Fatemeh Salmani,
-based on the methods of [Cui et al. (2020)](#acknowledgements-and-credits) and developed for her MSc thesis
-*"Structural Analysis of Deep Neural Networks"* (Shahid Beheshti University, supervisor Dr. Masoud Hajarian).
+PyTorch code for my MSc thesis *Structural Analysis of Deep Neural Networks* (Shahid Beheshti University,
+supervisor Dr. Masoud Hajarian), rewritten from scratch for BloodMNIST.
 
-> **What is new here:** the original paper evaluated CIFAR-10/100 and Fashion-MNIST. As far as I know,
-> active-subspace compression and active-subspace universal attacks have not been published on
-> BloodMNIST / MedMNIST; this repository applies them to a medical-imaging benchmark.
-> It is **not** a reproduction of the paper's numbers.
+The idea comes from Cui et al. (2020): cut a trained network after some layer and look at the gradients of the
+loss with respect to the neurons of that layer. Their covariance matrix usually has only a few large eigenvalues,
+so a small number of directions (the *active subspace*) explains most of what the rest of the network does.
+This is used for two things:
 
-## What the code does
+- **compression (ASNet):** keep the first layers, project onto the active subspace and replace the rest of the
+  network with a polynomial chaos expansion;
+- **universal attacks:** build one perturbation for all images from the dominant active direction of the input
+  gradients, and compare it with the UAP attack of Moosavi-Dezfooli et al. (2017).
 
-| Step | Idea | Code |
-|---|---|---|
-| 1. Train | VGG-19 (BN) or the paper's 4-layer CNN on BloodMNIST | `scripts/train.py` |
-| 2. Active subspace | Cut the network after layer *l*. The covariance of the loss gradients w.r.t. the layer-*l* neurons, **C = E[∇ℓ ∇ℓᵀ]**, has few large eigenvalues: those directions are the *active neurons*. Estimated with a streaming **frequent-directions** sketch. | `asnet/active_subspace.py` |
-| 3. ASNet | Replace everything after layer *l* by an **AS layer** (projection on the *r* active directions) and a **polynomial chaos expansion (PCE)** layer, initialised by least squares and fine-tuned with distillation. `--l1 > 0` gives the sparse **ASNet-s**. | `asnet/asnet.py`, `asnet/pce.py`, `scripts/compress.py` |
-| 4. Universal attack | One input-space perturbation **v** (‖v‖₂ ≤ δ) built recursively from the dominant active direction of the input gradients, compared with the classic **UAP** baseline. | `asnet/attack.py`, `asnet/uap_baseline.py`, `scripts/attack.py` |
+The paper used CIFAR-10/100 and Fashion-MNIST. Here the same methods are applied to BloodMNIST
+(8 classes of blood cell microscopy images).
 
-## Quick start
+## Run it
+
+The easiest way is the Colab notebook (button above). It trains the model, plots the eigenvalue spectrum,
+builds ASNet and compares the two attacks.
+
+Locally:
 
 ```bash
 pip install -r requirements.txt
 
-# 1) train the baseline (BloodMNIST is downloaded automatically)
 python scripts/train.py --model vgg19 --size 64 --epochs 30
-
-# 2) active subspace + ASNet (keep the first 12 units, r = 50 active neurons, PCE degree 2)
-python scripts/compress.py --ckpt checkpoints/vgg19_s64.pt --cut 12 --r 50 --p 2
-python scripts/compress.py --ckpt checkpoints/vgg19_s64.pt --cut 12 --r 50 --l1 1e-4   # ASNet-s
-
-# 3) universal attacks: active subspace vs UAP
-python scripts/attack.py --ckpt checkpoints/vgg19_s64.pt --delta 5 10 --n-train 200
+python scripts/compress.py --ckpt checkpoints/vgg19_s64.pt --cut 16 --r 50 --p 2
+python scripts/compress.py --ckpt checkpoints/vgg19_s64.pt --cut 16 --r 50 --l1 1e-4   # sparse ASNet-s
+python scripts/attack.py --ckpt checkpoints/vgg19_s64.pt --delta 2 4 6 8 10 --n-train 200
 python scripts/attack.py --ckpt checkpoints/vgg19_s64.pt --target-class 3 --n-train 100
 
-# tests (random data, no download)
-pytest -q
+pytest -q   # small tests on random data
 ```
 
-Outputs go to `checkpoints/` and `results/` (JSON summaries, eigenvalues, saved perturbations).
+BloodMNIST is downloaded automatically by the `medmnist` package.
 
-### Notes on choices
-
-- **Image size.** VGG-19 has five 2×2 pooling stages, so 28×28 inputs collapse to zero size. The default is the
-  64×64 version of BloodMNIST (`--size 64`).
-- **Defaults follow the paper:** PCE degree p = 2, r = 50 active neurons (or choose r with ε = 0.05),
-  distillation weight β = 0.1, 50 epochs of Adam with learning rates 1e-4 (pre-model) / 1e-5 (AS + PCE layers),
-  attack failure limit α = 10, 100 samples for one-class and 200 for all-class attacks, UAP capped at 10 iterations.
-- **Attack radius.** Inputs are normalised to [-1, 1] and δ is measured in that space. The paper's δ = 5–10 was set
-  for CIFAR images; rescale it for 64×64 inputs and report the value you use.
-- **Fooling rate** = fraction of samples whose predicted label changes after adding v.
-- The attack's step-size search (trying ±t·u with t = δ, δ/2, …) and the distillation loss form are my own
-  implementation choices; they are documented in the code.
-
-## Repository layout
+## Code
 
 ```
 asnet/
-  data.py             BloodMNIST loaders (medmnist package)
-  models.py           VGG-19 / small CNN written as cuttable "units"
-  active_subspace.py  gradient covariance, frequent directions, rank selection
-  pce.py              Hermite polynomial chaos layer + least-squares fit
-  asnet.py            ASNet construction, distillation fine-tuning, l1 proximal step
-  attack.py           recursive active-subspace universal attack
-  uap_baseline.py     UAP baseline via the Adversarial Robustness Toolbox
-  utils.py            training / evaluation helpers
-scripts/              train.py, compress.py, attack.py
-tests/                smoke tests on random data
+  data.py             BloodMNIST loaders
+  models.py           VGG-19 and a small CNN, written so they can be cut after any layer
+  active_subspace.py  gradient covariance, frequent-directions sketch, choice of r
+  pce.py              Hermite polynomial chaos layer, least-squares fit
+  asnet.py            ASNet, distillation fine-tuning, l1 proximal step
+  attack.py           active-subspace universal attack
+  uap_baseline.py     UAP baseline (through the Adversarial Robustness Toolbox)
+scripts/              train / compress / attack from the command line
+notebooks/            Colab notebook with all plots
+tests/
 ```
 
-## Acknowledgements and Credits
+Some details:
 
-This repository contains **no source code copied from the original authors' repositories**.
+- 64x64 images are used because VGG-19 has five pooling layers and 28x28 images become too small.
+- Defaults follow the paper where possible: p = 2, r = 50 (or chosen with eps = 0.05), distillation weight 0.1,
+  Adam with learning rate 1e-4 for the first layers and 1e-5 for the new layers, alpha = 10 failed steps,
+  200 images for the attacks and 10 iterations for UAP.
+- Images are normalized to [-1, 1] and delta is the l2 norm of the perturbation in that space. The values in the
+  paper were for CIFAR images, so a range of deltas is tried here.
+- Fooling rate = fraction of images whose predicted label changes after adding the perturbation.
+- The step-size search in the attack (signs ±1, steps delta, delta/2, ...) and the exact form of the
+  distillation loss are my choices; the paper does not fix them completely.
 
-**Methods re-implemented (please cite the original authors):**
+## References and credits
 
-- *Active subspace analysis, ASNet (active-subspace + polynomial-chaos-expansion layers) and the
-  active-subspace universal adversarial attack* — Chunfeng Cui, Kaiqi Zhang, Talgat Daulbaev,
-  Julia Gusak, Ivan Oseledets and Zheng Zhang, "Active Subspace of Neural Networks: Structural
-  Analysis and Universal Attacks", *SIAM J. Math. Data Sci.* 2(4):1096–1122, 2020,
-  [doi:10.1137/19M1296070](https://doi.org/10.1137/19M1296070) ([arXiv:1910.13025](https://arxiv.org/abs/1910.13025)).
-  Original code: <https://github.com/chunfengc/ASNet> (no license; not reused).
-- *Active subspaces* — P. G. Constantine, *Active Subspaces*, SIAM, 2015; P. G. Constantine, E. Dow, Q. Wang,
-  *SIAM J. Sci. Comput.* 36(4):A1500–A1524, 2014.
-- *Frequent directions* — E. Liberty, KDD 2013; M. Ghashami, E. Liberty, J. M. Phillips, D. P. Woodruff,
-  *SIAM J. Comput.* 45(5), 2016.
-- *Universal Adversarial Perturbations (baseline)* — S.-M. Moosavi-Dezfooli, A. Fawzi, O. Fawzi, P. Frossard,
-  CVPR 2017 ([doi:10.1109/CVPR.2017.17](https://doi.org/10.1109/CVPR.2017.17)), with DeepFool (CVPR 2016).
-  Original code: <https://github.com/LTS4/universal> (no license; not reused). The baseline here calls the
-  MIT-licensed [Adversarial Robustness Toolbox](https://github.com/Trusted-AI/adversarial-robustness-toolbox).
-- *Knowledge distillation* — G. Hinton, O. Vinyals, J. Dean, 2015.
+All code in this repository was written for this project; nothing was copied from the authors' original
+repositories (they have no license).
 
-**Data:** BloodMNIST from MedMNIST v2 (Yang et al., *Scientific Data* 10:41, 2023; Yang et al., ISBI 2021),
-licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), derived from Acevedo et al.,
-*Data in Brief* 30:105474 (2020). Images are downloaded at runtime from Zenodo
-([doi:10.5281/zenodo.10519652](https://doi.org/10.5281/zenodo.10519652)) by the `medmnist` package (Apache-2.0)
-and are not redistributed here; images are normalised to [-1, 1]. **Not for clinical use.**
+- C. Cui, K. Zhang, T. Daulbaev, J. Gusak, I. Oseledets, Z. Zhang. Active Subspace of Neural Networks: Structural
+  Analysis and Universal Attacks. *SIAM J. Math. Data Sci.* 2(4):1096–1122, 2020.
+  [doi:10.1137/19M1296070](https://doi.org/10.1137/19M1296070), [arXiv:1910.13025](https://arxiv.org/abs/1910.13025).
+  Original code: https://github.com/chunfengc/ASNet
+- P. G. Constantine. *Active Subspaces*. SIAM, 2015.
+- E. Liberty (KDD 2013); M. Ghashami, E. Liberty, J. M. Phillips, D. P. Woodruff (SIAM J. Comput. 2016).
+  Frequent directions.
+- S.-M. Moosavi-Dezfooli, A. Fawzi, O. Fawzi, P. Frossard. Universal Adversarial Perturbations. CVPR 2017.
+  Original code: https://github.com/LTS4/universal. The baseline here uses the implementation in
+  [Adversarial Robustness Toolbox](https://github.com/Trusted-AI/adversarial-robustness-toolbox) (MIT).
+- G. Hinton, O. Vinyals, J. Dean. Distilling the Knowledge in a Neural Network, 2015.
+- **Data:** BloodMNIST from MedMNIST v2 (J. Yang et al., *Scientific Data* 10:41, 2023; ISBI 2021), CC BY 4.0,
+  based on A. Acevedo et al., *Data in Brief* 30:105474, 2020. The images are not included in this repository.
+  Not for clinical use.
 
-The results reported in the thesis were produced with an earlier codebase. Any errors in this re-implementation are
-my own. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`CITATION.bib`](CITATION.bib).
+The numbers in the thesis were obtained with an earlier version of the code. BibTeX entries are in
+[`CITATION.bib`](CITATION.bib) and licenses of the dependencies in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Fatemeh Salmani — for the code in this repository only. Third-party packages and the dataset
-keep their own licenses.
+MIT, see [LICENSE](LICENSE).

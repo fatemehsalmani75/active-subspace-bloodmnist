@@ -1,13 +1,5 @@
-# Copyright (c) 2026 Fatemeh Salmani. Licensed under the MIT License (see LICENSE).
-#
-# Independent re-implementation of the polynomial-chaos-expansion (PCE) layer used
-# by ASNet in: C. Cui et al., "Active Subspace of Neural Networks: Structural
-# Analysis and Universal Attacks", SIAM J. Math. Data Sci. 2(4):1096-1122, 2020.
-# doi:10.1137/19M1296070. Written from the paper; no code from
-# https://github.com/chunfengc/ASNet was copied.
-"""Total-degree Hermite polynomial chaos layer with least-squares initialisation."""
-
-from __future__ import annotations
+# Polynomial chaos expansion (Hermite, total degree <= p) used as the output layer
+# of ASNet (Cui et al., SIAM J. Math. Data Sci. 2020, Sec. 3.3).
 
 import itertools
 import math
@@ -16,78 +8,69 @@ import torch
 import torch.nn as nn
 
 
-def multi_indices(r: int, p: int) -> list[list[tuple[int, int]]]:
-    """All multi-indices with total degree <= p in r variables, each stored sparsely
-    as a list of (variable, degree) pairs. Count = C(r + p, p)."""
-    out = [[]]
-    for deg in range(1, p + 1):
-        for parts in _partitions(deg):
-            for vars_ in itertools.combinations(range(r), len(parts)):
-                for perm in set(itertools.permutations(parts)):
-                    out.append(list(zip(vars_, perm)))
-    return out
-
-
-def _partitions(n, max_part=None):
-    max_part = n if max_part is None else max_part
+def _partitions(n, largest=None):
+    largest = n if largest is None else largest
     if n == 0:
         yield ()
         return
-    for k in range(min(n, max_part), 0, -1):
+    for k in range(min(n, largest), 0, -1):
         for rest in _partitions(n - k, k):
             yield (k,) + rest
 
 
-def hermite_table(z: torch.Tensor, p: int) -> torch.Tensor:
-    """Orthonormal probabilists' Hermite polynomials He_k(z)/sqrt(k!), k=0..p.
-    z: (B, r) -> (B, r, p+1)."""
-    h = [torch.ones_like(z), z]
+def multi_indices(r, p):
+    """Multi-indices with |alpha| <= p as lists of (variable, degree); C(r+p, p) of them."""
+    out = [[]]
+    for total in range(1, p + 1):
+        for parts in _partitions(total):
+            for vs in itertools.combinations(range(r), len(parts)):
+                for degs in set(itertools.permutations(parts)):
+                    out.append(list(zip(vs, degs)))
+    return out
+
+
+def hermite(z, p):
+    """Normalized probabilists' Hermite polynomials, shape (B, r, p+1)."""
+    H = [torch.ones_like(z), z]
     for k in range(1, p):
-        h.append(z * h[k] - k * h[k - 1])
-    h = torch.stack(h[: p + 1], dim=-1)
-    norm = torch.tensor([math.sqrt(math.factorial(k)) for k in range(p + 1)],
-                        device=z.device, dtype=z.dtype)
-    return h / norm
+        H.append(z * H[k] - k * H[k - 1])
+    H = torch.stack(H[:p + 1], -1)
+    c = torch.tensor([math.sqrt(math.factorial(k)) for k in range(p + 1)],
+                     dtype=z.dtype, device=z.device)
+    return H / c
 
 
 class PCELayer(nn.Module):
-    """y = W phi(z_std) + b, where phi are the PCE basis functions of the
-    standardised active variables z_std = (z - mu) / sigma."""
-
-    def __init__(self, r: int, p: int, out_features: int):
+    def __init__(self, r, p, out_features):
         super().__init__()
         self.r, self.p = r, p
         idx = multi_indices(r, p)
         self.num_terms = len(idx)
-        # pad every multi-index to p factors with (var 0, degree 0) == 1
-        var = torch.zeros(self.num_terms, max(p, 1), dtype=torch.long)
-        deg = torch.zeros_like(var)
-        for j, mi in enumerate(idx):
-            for k, (v, d) in enumerate(mi):
+        var = torch.zeros(len(idx), max(p, 1), dtype=torch.long)
+        deg = torch.zeros_like(var)   # unused slots point to He_0 = 1
+        for j, a in enumerate(idx):
+            for k, (v, d) in enumerate(a):
                 var[j, k], deg[j, k] = v, d
         self.register_buffer("var", var)
         self.register_buffer("deg", deg)
         self.register_buffer("mu", torch.zeros(r))
         self.register_buffer("sigma", torch.ones(r))
-        self.linear = nn.Linear(self.num_terms, out_features)
+        self.linear = nn.Linear(len(idx), out_features)
 
-    def basis(self, z: torch.Tensor) -> torch.Tensor:
-        z = (z - self.mu) / self.sigma
-        H = hermite_table(z, self.p)                       # (B, r, p+1)
-        vals = H[:, self.var, self.deg]                    # (B, M, p)
-        return vals.prod(dim=-1)                           # (B, M)
+    def basis(self, z):
+        H = hermite((z - self.mu) / self.sigma, self.p)
+        return H[:, self.var, self.deg].prod(-1)
 
     def forward(self, z):
         return self.linear(self.basis(z))
 
     @torch.no_grad()
-    def fit_least_squares(self, Z: torch.Tensor, Y: torch.Tensor, ridge: float = 1e-6):
-        """Set mu/sigma from Z and solve min ||Phi W^T + b - Y||^2 (+ ridge)."""
+    def fit_least_squares(self, Z, Y, ridge=1e-6):
         self.mu.copy_(Z.mean(0))
         self.sigma.copy_(Z.std(0).clamp_min(1e-8))
-        Phi = self.basis(Z).double()
-        Phi1 = torch.cat([Phi, torch.ones(Phi.shape[0], 1, dtype=Phi.dtype)], 1)
-        A = Phi1.T @ Phi1 + ridge * torch.eye(Phi1.shape[1], dtype=Phi.dtype)
-        coef = torch.linalg.solve(A, Phi1.T @ Y.double())   # (M+1, K)
+        A = self.basis(Z).double()
+        A = torch.cat([A, torch.ones(len(A), 1, dtype=A.dtype)], 1)
+        coef = torch.linalg.solve(A.T @ A + ridge * torch.eye(A.shape[1], dtype=A.dtype),
+                                  A.T @ Y.double())
         self.linear.weight.copy_(coef[:-1].T.float())
         self.linear.bias.copy_(coef[-1].float())

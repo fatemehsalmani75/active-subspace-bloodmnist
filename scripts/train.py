@@ -12,9 +12,9 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from asnet.data import NUM_CLASSES, get_datasets, make_loader  # noqa: E402
-from asnet.models import build_model, count_params  # noqa: E402
-from asnet.utils import evaluate, get_device, save_json, set_seed, train_classifier  # noqa: E402
+from asnet.data import NUM_CLASSES, get_datasets, make_loader
+from asnet.models import build_model, count_params
+from asnet.utils import evaluate, get_device, save_json, set_seed, train_classifier
 
 
 def main():

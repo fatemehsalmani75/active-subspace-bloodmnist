@@ -1,7 +1,7 @@
 """Active-subspace analysis + ASNet compression of a trained network.
 
 Example:
-    python scripts/compress.py --ckpt checkpoints/vgg19_s64.pt --cut 12 --r 50 --p 2
+    python scripts/compress.py --ckpt checkpoints/vgg19_s64.pt --cut 16 --r 50 --p 2
 """
 
 import argparse
@@ -13,10 +13,10 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from asnet.asnet import build_asnet, finetune_asnet  # noqa: E402
-from asnet.data import NUM_CLASSES, get_datasets, make_loader, subset  # noqa: E402
-from asnet.models import build_model, count_params  # noqa: E402
-from asnet.utils import evaluate, get_device, save_json, set_seed  # noqa: E402
+from asnet.asnet import build_asnet, finetune_asnet
+from asnet.data import NUM_CLASSES, get_datasets, make_loader, subset
+from asnet.models import build_model, count_params
+from asnet.utils import evaluate, get_device, save_json, set_seed
 
 
 def main():

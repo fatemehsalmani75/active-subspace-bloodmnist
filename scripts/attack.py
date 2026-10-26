@@ -14,10 +14,10 @@ from torch.utils.data import Subset
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from asnet.attack import as_universal_attack, fooling_rate  # noqa: E402
-from asnet.data import NUM_CLASSES, get_datasets, subset  # noqa: E402
-from asnet.models import build_model  # noqa: E402
-from asnet.utils import get_device, save_json, set_seed, stack_dataset  # noqa: E402
+from asnet.attack import as_universal_attack, fooling_rate
+from asnet.data import NUM_CLASSES, get_datasets, subset
+from asnet.models import build_model
+from asnet.utils import get_device, save_json, set_seed, stack_dataset
 
 
 def main():

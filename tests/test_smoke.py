@@ -1,4 +1,4 @@
-"""Fast checks on random data (no dataset download needed). Run: pytest -q"""
+# quick checks on random data, no download needed: pytest -q
 
 import math
 import sys
@@ -9,11 +9,11 @@ from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from asnet.active_subspace import FrequentDirections, choose_rank, compute_active_subspace  # noqa: E402
-from asnet.asnet import build_asnet, finetune_asnet  # noqa: E402
-from asnet.attack import as_universal_attack, fooling_rate  # noqa: E402
-from asnet.models import small_cnn, split_model, vgg19  # noqa: E402
-from asnet.pce import PCELayer, multi_indices  # noqa: E402
+from asnet.active_subspace import FrequentDirections, choose_rank, compute_active_subspace
+from asnet.asnet import build_asnet, finetune_asnet
+from asnet.attack import as_universal_attack, fooling_rate
+from asnet.models import small_cnn, split_model, vgg19
+from asnet.pce import PCELayer, multi_indices
 
 torch.manual_seed(0)
 
