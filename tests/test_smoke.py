@@ -1,0 +1,77 @@
+"""Fast checks on random data (no dataset download needed). Run: pytest -q"""
+
+import math
+import sys
+from pathlib import Path
+
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from asnet.active_subspace import FrequentDirections, choose_rank, compute_active_subspace  # noqa: E402
+from asnet.asnet import build_asnet, finetune_asnet  # noqa: E402
+from asnet.attack import as_universal_attack, fooling_rate  # noqa: E402
+from asnet.models import small_cnn, split_model, vgg19  # noqa: E402
+from asnet.pce import PCELayer, multi_indices  # noqa: E402
+
+torch.manual_seed(0)
+
+
+def _loader(n=64, size=32, bs=16):
+    X = torch.rand(n, 3, size, size) * 2 - 1
+    y = torch.randint(0, 8, (n,))
+    return DataLoader(TensorDataset(X, y), batch_size=bs), X, y
+
+
+def test_multi_index_count():
+    for r, p in [(3, 2), (5, 3), (50, 2)]:
+        assert len(multi_indices(r, p)) == math.comb(r + p, p)
+
+
+def test_pce_least_squares_fits_quadratic():
+    Z = torch.randn(2000, 3)
+    Y = torch.stack([Z[:, 0] ** 2 + Z[:, 1] * Z[:, 2], 2 * Z[:, 0] - 1], 1)
+    layer = PCELayer(3, 2, 2)
+    layer.fit_least_squares(Z, Y)
+    assert torch.allclose(layer(Z), Y, atol=1e-3)
+
+
+def test_frequent_directions_matches_exact():
+    G = torch.randn(500, 40, dtype=torch.float64) @ torch.diag(torch.logspace(0, -3, 40, dtype=torch.float64))
+    fd = FrequentDirections(40, 20)
+    fd.update(G)
+    B = fd.sketch()
+    err = torch.linalg.matrix_norm(G.T @ G - B.T @ B, ord=2)
+    # FD guarantee: ||G^T G - B^T B||_2 <= ||G||_F^2 / ell
+    assert err <= torch.linalg.matrix_norm(G) ** 2 / 20 + 1e-9
+
+
+def test_choose_rank():
+    assert choose_rank(torch.tensor([90.0, 6.0, 3.0, 1.0]), 0.05) == 2
+
+
+def test_split_is_exact():
+    model = vgg19().eval()
+    loader, X, _ = _loader()
+    pre, post, n = split_model(model, 8, X)
+    with torch.no_grad():
+        assert torch.allclose(post(pre(X[:4])), model(X[:4]), atol=1e-5)
+
+
+def test_active_subspace_and_asnet_pipeline():
+    model = small_cnn(image_size=32).eval()
+    loader, X, y = _loader()
+    sub = compute_active_subspace(*split_model(model, 3, X)[:2], loader, r=None, eps=0.05)
+    assert sub.V.shape[1] == sub.r and torch.allclose(sub.V.T @ sub.V, torch.eye(sub.r), atol=1e-4)
+    net, _ = build_asnet(model, 3, loader, loader, r=4, p=2)
+    assert net(X[:2]).shape == (2, 8)
+    finetune_asnet(net, model, loader, epochs=1, log=lambda *_: None)
+
+
+def test_attack_respects_radius():
+    model = small_cnn(image_size=32).eval()
+    _, X, y = _loader(32)
+    res = as_universal_attack(model, X, y, delta=3.0, alpha=2, max_iter=5, log=lambda *_: None)
+    assert res.v.norm() <= 3.0 + 1e-5
+    assert 0.0 <= fooling_rate(model, X, res.v) <= 1.0
