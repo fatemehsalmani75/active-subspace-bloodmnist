@@ -18,6 +18,52 @@ This is used for two things:
 The paper used CIFAR-10/100 and Fashion-MNIST. Here the same methods are applied to BloodMNIST
 (8 classes of blood cell microscopy images).
 
+## Results
+
+VGG-19 trained for 20 epochs on 64x64 BloodMNIST (Colab, T4 GPU). Full run: [the notebook](notebooks/bloodmnist_active_subspace.ipynb).
+
+### Active subspace
+
+![spectrum](figures/spectrum.png)
+
+The gradient covariance is strongly low-rank. After layer 16 (4th pooling) a handful of directions already capture
+95% of the energy, out of 8192 neurons. Deeper in the network (layer 20) the energy is more spread out.
+
+### ASNet
+
+| model | test accuracy | parameters | compression |
+|---|---|---|---|
+| VGG-19 | 96.52% | 20.04 M | 1.00x |
+| ASNet (cut 16, r = 50, p = 2), least-squares init only | 96.23% | 11.01 M | 1.82x |
+| ASNet (cut 16, r = 50, p = 2), after 10 epochs fine-tuning | 96.29% | 11.01 M | 1.82x |
+
+![asnet](figures/asnet.png)
+
+Replacing the last four 512-channel conv layers and the classifier (about 9.4 M parameters) with the AS + PCE
+layers (about 0.4 M) costs only 0.2% accuracy, and the
+least-squares initialization alone is almost as good as fine-tuning. Most remaining parameters are in the first 16
+layers, so cutting earlier (e.g. layer 11) should give a larger compression; that is the next experiment.
+
+### Universal attacks
+
+Fooling rate on the **test set**, perturbation built from 200 training images:
+
+| ‖v‖₂ | 2 | 4 | 6 | 8 | 10 |
+|---|---|---|---|---|---|
+| active subspace | **24.1%** | **73.2%** | **88.1%** | **89.9%** | 90.3% |
+| UAP | 12.2% | 23.3% | 71.9% | 82.1% | **91.2%** |
+
+![attack](figures/attack.png)
+
+For small and medium perturbations the active-subspace attack is much stronger than UAP (73% vs 23% at
+‖v‖₂ = 4). At ‖v‖₂ = 10 both methods fool about 90% of the images. The results on training and test images are
+close, so the perturbation generalizes to unseen images.
+
+![examples](figures/examples.png)
+
+The AS perturbation is concentrated in the center of the image, where the cell is, and pushes most images towards
+the *erythroblast* class.
+
 ## Run it
 
 The easiest way is the Colab notebook (button above). It trains the model, plots the eigenvalue spectrum,
