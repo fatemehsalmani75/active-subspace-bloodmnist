@@ -64,6 +64,17 @@ close, so the perturbation generalizes to unseen images.
 The AS perturbation is concentrated in the center of the image, where the cell is, and pushes most images towards
 the *erythroblast* class.
 
+### Work in progress: defense and the attractor class
+
+[`notebooks/defense_and_analysis.ipynb`](notebooks/defense_and_analysis.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/defense_and_analysis.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+uses the same idea in the other direction:
+
+- removing the leading **input-space** active directions before classification (purification), tested also
+  against an adaptive attack that knows the defense;
+- detecting perturbed images by their energy in those directions (ROC AUC, with random noise as a control);
+- checking why almost every fooled image ends up as *erythroblast* (nearest class? or does the perturbation look like one?);
+- repeating the attacks with 3 different training sets.
+
 ## Run it
 
 The easiest way is the Colab notebook (button above). It trains the model, plots the eigenvalue spectrum,
@@ -95,6 +106,8 @@ asnet/
   pce.py              Hermite polynomial chaos layer, least-squares fit
   asnet.py            ASNet, distillation fine-tuning, l1 proximal step
   attack.py           active-subspace universal attack
+  defense.py          input-space active subspace, purification, detection
+  analysis.py         checks for the attractor class
   uap_baseline.py     UAP baseline (through the Adversarial Robustness Toolbox)
 scripts/              train / compress / attack from the command line
 notebooks/            Colab notebook with all plots

@@ -75,3 +75,16 @@ def test_attack_respects_radius():
     res = as_universal_attack(model, X, y, delta=3.0, alpha=2, max_iter=5, log=lambda *_: None)
     assert res.v.norm() <= 3.0 + 1e-5
     assert 0.0 <= fooling_rate(model, X, res.v) <= 1.0
+
+
+def test_purification_removes_subspace():
+    from asnet.defense import Purified, input_active_subspace, overlap, roc_auc
+    model = small_cnn(image_size=32).eval()
+    loader, X, _ = _loader()
+    sub = input_active_subspace(model, loader, k=5, sketch_size=20)
+    assert torch.allclose(sub.U.T @ sub.U, torch.eye(5), atol=1e-4)
+    net = Purified(model, sub)
+    d = (net.purify(X[:4]).flatten(1) - sub.mu) @ sub.U
+    assert d.abs().max() < 1e-4
+    assert abs(overlap(sub.U[:, 0].view(1, 3, 32, 32), sub) - 1) < 1e-4
+    assert roc_auc([0, 1], [2, 3]) == 1.0 and roc_auc([1], [1]) == 0.5
