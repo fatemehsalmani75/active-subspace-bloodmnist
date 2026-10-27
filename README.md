@@ -164,6 +164,9 @@ scratch on 200 new training images (2 different sets), and the perturbations are
   not from noise augmentation.
 - The cost is 3.4 points of clean accuracy (95.6% → 92.2%).
 
+Comparison with Universal Adversarial Training, UAP fine-tuning and PGD adversarial training, with training time:
+[`notebooks/defense_baselines.ipynb`](notebooks/defense_baselines.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/defense_baselines.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> (results to come).
+
 Limits of this result: one fine-tuning run, ‖v‖₂ = 4 only, and robustness to *universal* perturbations (not to
 per-image attacks such as PGD). Natural next steps are the same experiment with several training seeds and norms,
 a comparison with universal adversarial training based on UAP-style perturbations (Shafahi et al., AAAI 2020) and
@@ -201,7 +204,7 @@ asnet/
   asnet.py            ASNet, distillation fine-tuning, l1 proximal step
   attack.py           active-subspace universal attack
   defense.py          input-space active subspace, purification, detection
-  robust.py           fine-tuning against universal perturbations
+  robust.py           AS fine-tuning and the baselines (UAT, UAP fine-tuning, PGD-AT)
   analysis.py         checks for the attractor class
   uap_baseline.py     UAP baseline (through the Adversarial Robustness Toolbox)
 scripts/              train / compress / attack from the command line

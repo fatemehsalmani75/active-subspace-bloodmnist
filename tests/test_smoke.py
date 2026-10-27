@@ -99,7 +99,18 @@ def test_mahalanobis_and_finetune():
     var = projection_variance(sub, X)
     s = mahalanobis_scores(sub, X, var)
     assert s.shape == (len(X),) and abs(s.mean().item() / 4 - 1) < 0.2   # about k on clean data
-    adv_finetune(model, loader, noise_perturbation(X[:1].shape, 2.0), epochs=1, refresh=2, log=lambda *a: None)
+    _, t = adv_finetune(model, loader, noise_perturbation(X[:1].shape, 2.0), epochs=1, refresh=2, log=lambda *a: None)
     adv_finetune(model, loader, as_perturbation(X[:16], y[:16], 2.0, max_iter=2), epochs=1, refresh=3,
                  log=lambda *a: None)
-    assert not model.training
+    assert not model.training and t > 0
+
+
+def test_uat_and_pgd():
+    from asnet.robust import pgd_accuracy, pgd_finetune, pgd_l2, uat_finetune
+    model = small_cnn(image_size=32)
+    loader, X, y = _loader()
+    xa = pgd_l2(model.eval(), X[:8], y[:8], eps=1.5, steps=3)
+    assert ((xa - X[:8]).flatten(1).norm(dim=1) <= 1.5 + 1e-4).all()
+    uat_finetune(model, loader, delta=2.0, epochs=1, log=lambda *a: None)
+    pgd_finetune(model, loader, eps=1.0, epochs=1, steps=2, log=lambda *a: None)
+    assert 0 <= pgd_accuracy(model, X[:16], y[:16], eps=1.0, steps=2) <= 1
