@@ -55,25 +55,88 @@ Fooling rate on the **test set**, perturbation built from 200 training images:
 
 ![attack](figures/attack.png)
 
-For small and medium perturbations the active-subspace attack is much stronger than UAP (73% vs 23% at
-‖v‖₂ = 4). At ‖v‖₂ = 10 both methods fool about 90% of the images. The results on training and test images are
-close, so the perturbation generalizes to unseen images.
+The table above is a single run. Repeated with 3 different sets of 200 training images (second notebook, a newly
+trained VGG-19 with 97.3% test accuracy), mean ± std of the test fooling rate:
+
+| ‖v‖₂ | active subspace | UAP |
+|---|---|---|
+| 4 | **51.0 ± 2.6%** | 23.9 ± 8.5% |
+| 6 | **77.9 ± 5.3%** | 60.0 ± 4.3% |
+
+The absolute numbers depend on the trained model (73% vs 51% at ‖v‖₂ = 4 for two trainings), but the gap is stable:
+about 2x at ‖v‖₂ = 4, with a much smaller spread for the AS attack.
 
 ![examples](figures/examples.png)
 
-The AS perturbation is concentrated in the center of the image, where the cell is, and pushes most images towards
-the *erythroblast* class.
+The AS perturbation is concentrated in the center of the image, where the cell is.
 
-### Work in progress: defense and the attractor class
+## Why the attack works, and can the same idea defend?
 
 [`notebooks/defense_and_analysis.ipynb`](notebooks/defense_and_analysis.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/defense_and_analysis.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
-uses the same idea in the other direction:
 
-- removing the leading **input-space** active directions before classification (purification), tested also
-  against an adaptive attack that knows the defense;
-- detecting perturbed images by their energy in those directions (ROC AUC, with random noise as a control);
-- checking why almost every fooled image ends up as *erythroblast* (nearest class? or does the perturbation look like one?);
-- repeating the attacks with 3 different training sets.
+Here the active subspace is computed in **input space**: the top-k eigenvectors $U_k$ of
+$\mathbb{E}[\nabla_x \ell \, \nabla_x \ell^T]$ over 2000 clean training images.
+
+![input spectrum](figures/input_spectrum.png)
+
+### The AS perturbation lives in a few input directions
+
+Fraction of $\|v\|^2$ inside $\mathrm{span}(U_k)$ (‖v‖₂ = 4, mean ± std over 3 runs; the image has 12 288 dimensions):
+
+| k | 5 | 10 | 20 | 50 |
+|---|---|---|---|---|
+| active subspace | **38.8 ± 9.0%** | **47.4 ± 10.2%** | **60.2 ± 12.3%** | **72.6 ± 5.0%** |
+| UAP | 11.9 ± 2.6% | 22.9 ± 8.3% | 40.9 ± 13.5% | 53.3 ± 12.5% |
+
+The AS attack concentrates its budget on the directions the model is most sensitive to, which explains why it is
+stronger at the same norm.
+
+### Where do fooled images go?
+
+![targets](figures/targets.png)
+![attractor](figures/attractor.png)
+
+- The attractor class is **not fixed**: the AS attack sends most fooled images to *lymphocyte* (about 70% in two runs,
+  *erythroblast* in the third), UAP mostly to *erythroblast*.
+- It is **not the nearest class**: lymphocyte is the runner-up class of only 3% of clean images and has the
+  largest mean logit margin of all classes.
+- The perturbation does **not look like** the average image of any class (|cos| < 0.2), but it is aligned with the
+  model's gradient of $\log p_c$ for erythroblast (0.56) and lymphocyte (0.50), and opposite to the four granulocyte
+  classes (about −0.75).
+
+Erythroblasts and lymphocytes are the two cell types with a single round, dense nucleus filling most of the cell;
+basophils, eosinophils, neutrophils and immature granulocytes have lobed or granular nuclei. The perturbation sits on
+the nucleus and adds what *the model* treats as evidence of a round compact nucleus.
+
+### Purification does not survive an adaptive attack
+
+Classify $x - U_kU_k^T(x-\mu)$ instead of $x$ (‖v‖₂ = 4):
+
+![purification](figures/purification.png)
+
+Removing 5 directions makes the original AS perturbation useless (47% → 7%), but an attack re-run on the defended
+model still fools 28–49% of the images, and clean accuracy drops from 97% to 85% (k = 5) and 63% (k = 20). The input
+spectrum decays slowly (50 directions for 92% of the energy), so these directions also carry the class information.
+Without the adaptive test this defense would have looked very good.
+
+### Detection is weak
+
+ROC AUC of the score $\|U_k^T(x-\mu)\|^2$, clean vs. perturbed test images (‖v‖₂ = 4):
+
+| k | 5 | 10 | 20 | 50 |
+|---|---|---|---|---|
+| active subspace | 0.659 | 0.620 | 0.579 | 0.553 |
+| UAP | 0.552 | 0.550 | 0.551 | 0.548 |
+| random noise (same norm) | 0.503 | 0.503 | 0.500 | 0.501 |
+
+Better than chance and specific to the attack (random noise stays at 0.5), but far from usable: the natural variation
+of clean images along these directions is much larger than the perturbation.
+
+### Next
+
+- normalize the detection score by the clean variance in each direction (Mahalanobis distance);
+- fine-tune the model on AS universal perturbations (cheap, because one perturbation serves the whole batch) and
+  measure robustness against both attacks, including adaptive ones.
 
 ## Run it
 
