@@ -132,11 +132,12 @@ ROC AUC of the score $\|U_k^T(x-\mu)\|^2$, clean vs. perturbed test images (‖v
 Better than chance and specific to the attack (random noise stays at 0.5), but far from usable: the natural variation
 of clean images along these directions is much larger than the perturbation.
 
-### Next
+### Next: [`notebooks/robust_training.ipynb`](notebooks/robust_training.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/robust_training.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-- normalize the detection score by the clean variance in each direction (Mahalanobis distance);
-- fine-tune the model on AS universal perturbations (cheap, because one perturbation serves the whole batch) and
-  measure robustness against both attacks, including adaptive ones.
+- detection score normalized by the clean variance in each direction (Mahalanobis distance);
+- fine-tuning on AS universal perturbations rebuilt on the current model during training (cheap, because one
+  perturbation serves the whole batch), against a control fine-tuned on random noise of the same norm, both
+  attacked again from scratch.
 
 ## Run it
 
@@ -170,6 +171,7 @@ asnet/
   asnet.py            ASNet, distillation fine-tuning, l1 proximal step
   attack.py           active-subspace universal attack
   defense.py          input-space active subspace, purification, detection
+  robust.py           fine-tuning against universal perturbations
   analysis.py         checks for the attractor class
   uap_baseline.py     UAP baseline (through the Adversarial Robustness Toolbox)
 scripts/              train / compress / attack from the command line

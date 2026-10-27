@@ -88,3 +88,18 @@ def test_purification_removes_subspace():
     assert d.abs().max() < 1e-4
     assert abs(overlap(sub.U[:, 0].view(1, 3, 32, 32), sub) - 1) < 1e-4
     assert roc_auc([0, 1], [2, 3]) == 1.0 and roc_auc([1], [1]) == 0.5
+
+
+def test_mahalanobis_and_finetune():
+    from asnet.defense import input_active_subspace, mahalanobis_scores, projection_variance
+    from asnet.robust import adv_finetune, as_perturbation, noise_perturbation
+    model = small_cnn(image_size=32)
+    loader, X, y = _loader()
+    sub = input_active_subspace(model.eval(), loader, k=4, sketch_size=20)
+    var = projection_variance(sub, X)
+    s = mahalanobis_scores(sub, X, var)
+    assert s.shape == (len(X),) and abs(s.mean().item() / 4 - 1) < 0.2   # about k on clean data
+    adv_finetune(model, loader, noise_perturbation(X[:1].shape, 2.0), epochs=1, refresh=2, log=lambda *a: None)
+    adv_finetune(model, loader, as_perturbation(X[:16], y[:16], 2.0, max_iter=2), epochs=1, refresh=3,
+                 log=lambda *a: None)
+    assert not model.training

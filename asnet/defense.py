@@ -73,6 +73,25 @@ def detection_scores(sub, X, bs=256):
     return torch.cat(out).cpu()
 
 
+@torch.no_grad()
+def projection_variance(sub, X, bs=256, eps=1e-8):
+    """Variance of clean images along each column of U (for the Mahalanobis score)."""
+    U, mu = sub.U.to(X.device), sub.mu.to(X.device)
+    P = torch.cat([(X[i:i + bs].flatten(1) - mu) @ U for i in range(0, len(X), bs)])
+    return (P.var(0) + eps).cpu()
+
+
+@torch.no_grad()
+def mahalanobis_scores(sub, X, var, bs=256):
+    """sum_j (u_j^T (x - mu))^2 / var_j : each direction measured in units of its
+    natural spread, so a small shift along a quiet direction counts."""
+    U, mu, var = sub.U.to(X.device), sub.mu.to(X.device), var.to(X.device)
+    out = []
+    for i in range(0, len(X), bs):
+        out.append((((X[i:i + bs].flatten(1) - mu) @ U).pow(2) / var).sum(1))
+    return torch.cat(out).cpu()
+
+
 def roc_auc(neg, pos):
     """AUC of a score that should be larger for `pos`; Mann-Whitney form, ties count 1/2."""
     neg, pos = torch.as_tensor(neg).double(), torch.as_tensor(pos).double()
