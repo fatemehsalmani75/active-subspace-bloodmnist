@@ -132,12 +132,42 @@ ROC AUC of the score $\|U_k^T(x-\mu)\|^2$, clean vs. perturbed test images (‖v
 Better than chance and specific to the attack (random noise stays at 0.5), but far from usable: the natural variation
 of clean images along these directions is much larger than the perturbation.
 
-### Next: [`notebooks/robust_training.ipynb`](notebooks/robust_training.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/robust_training.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+### Mahalanobis detection does not help either
 
-- detection score normalized by the clean variance in each direction (Mahalanobis distance);
-- fine-tuning on AS universal perturbations rebuilt on the current model during training (cheap, because one
-  perturbation serves the whole batch), against a control fine-tuned on random noise of the same norm, both
-  attacked again from scratch.
+[`notebooks/robust_training.ipynb`](notebooks/robust_training.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/robust_training.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+Dividing each direction by its clean variance, $s(x) = \sum_j (u_j^T(x-\mu))^2/\sigma_j^2$, gives ROC AUC 0.53–0.61 for
+the AS perturbation and 0.54–0.56 for UAP (random noise 0.50), no better than the plain energy score. A universal
+perturbation of norm 4 is a small shift compared with how much clean blood-cell images vary, even direction by
+direction, so per-image detection along these directions is not a practical defense.
+
+![detection](figures/detection.png)
+
+## Adversarial fine-tuning with the AS attack works
+
+Starting from the trained VGG-19, fine-tune 5 epochs where half of every batch gets a universal perturbation
+(‖v‖₂ = 4) that is **rebuilt with the AS attack on the current model every 60 steps** (from 100 training images).
+Control: the same fine-tuning with random noise of the same norm. All three models are then attacked again from
+scratch on 200 new training images (2 different sets), and the perturbations are applied to the test set.
+
+| model | clean acc | AS transfer | UAP transfer | **AS adaptive** | **UAP adaptive** |
+|---|---|---|---|---|---|
+| base | 95.6% | 64.9% | 21.7% | 66.2 ± 0.1% | 33.4 ± 28.0% |
+| noise fine-tuned | 95.7% | 61.7% | 19.9% | 66.0 ± 0.3% | 58.0 ± 9.0% |
+| **AS fine-tuned** | 92.2% | **10.2%** | **3.9%** | **18.7 ± 0.1%** | **7.8 ± 4.0%** |
+
+![robust](figures/robust.png)
+
+- Against an attack built on the fine-tuned model itself, the fooling rate of the AS attack drops from 66% to 19%,
+  and of UAP from 33% to 8%: training only on AS perturbations also protects against the other attack.
+- Fine-tuning on random noise of the same norm changes nothing, so the effect comes from the attack directions,
+  not from noise augmentation.
+- The cost is 3.4 points of clean accuracy (95.6% → 92.2%).
+
+Limits of this result: one fine-tuning run, ‖v‖₂ = 4 only, and robustness to *universal* perturbations (not to
+per-image attacks such as PGD). Natural next steps are the same experiment with several training seeds and norms,
+a comparison with universal adversarial training based on UAP-style perturbations (Shafahi et al., AAAI 2020) and
+with PGD adversarial training, and other MedMNIST datasets.
 
 ## Run it
 
@@ -207,6 +237,8 @@ repositories (they have no license).
   Original code: https://github.com/LTS4/universal. The baseline here uses the implementation in
   [Adversarial Robustness Toolbox](https://github.com/Trusted-AI/adversarial-robustness-toolbox) (MIT).
 - G. Hinton, O. Vinyals, J. Dean. Distilling the Knowledge in a Neural Network, 2015.
+- A. Shafahi, M. Najibi, Z. Xu, J. Dickerson, L. S. Davis, T. Goldstein. Universal Adversarial Training. AAAI 2020.
+  The fine-tuning loop here follows the same idea, with the AS attack generating the perturbation.
 - **Data:** BloodMNIST from MedMNIST v2 (J. Yang et al., *Scientific Data* 10:41, 2023; ISBI 2021), CC BY 4.0,
   based on A. Acevedo et al., *Data in Brief* 30:105474, 2020. The images are not included in this repository.
   Not for clinical use.
