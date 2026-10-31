@@ -114,3 +114,21 @@ def test_uat_and_pgd():
     uat_finetune(model, loader, delta=2.0, epochs=1, log=lambda *a: None)
     pgd_finetune(model, loader, eps=1.0, epochs=1, steps=2, log=lambda *a: None)
     assert 0 <= pgd_accuracy(model, X[:16], y[:16], eps=1.0, steps=2) <= 1
+
+
+def test_input_spectrum():
+    from asnet.spectrum import input_spectrum
+    model = small_cnn(image_size=32).eval()
+    loader, X, y = _loader()
+    s = input_spectrum(model, loader)
+    assert 0 < s["lambda1"] <= s["trace"] + 1e-6
+    assert 0 < s["lambda1_share"] <= s["top5_share"] <= 1 + 1e-6
+    # exact check of lambda1 against a full SVD of the gradient matrix
+    G = []
+    for x, yy in loader:
+        x = x.clone().requires_grad_(True)
+        l = torch.nn.functional.cross_entropy(model(x), yy, reduction="sum")
+        G.append(torch.autograd.grad(l, x)[0].flatten(1))
+    G = torch.cat(G).double()
+    lam1 = (torch.linalg.svdvals(G)[0] ** 2 / len(G)).item()
+    assert abs(s["lambda1"] - lam1) / lam1 < 1e-4
