@@ -164,8 +164,34 @@ scratch on 200 new training images (2 different sets), and the perturbations are
   not from noise augmentation.
 - The cost is 3.4 points of clean accuracy (95.6% → 92.2%).
 
-Comparison with Universal Adversarial Training, UAP fine-tuning and PGD adversarial training, with training time:
-[`notebooks/defense_baselines.ipynb`](notebooks/defense_baselines.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/defense_baselines.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> (results to come).
+### Compared with other defenses
+
+[`notebooks/defense_baselines.ipynb`](notebooks/defense_baselines.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/defense_baselines.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+Same base model (97.3%), 5 fine-tuning epochs each, half of every batch perturbed. Universal attacks at ‖v‖₂ = 4
+rebuilt on each model (2 attack sets, mean ± std); per-image ℓ₂ PGD at ε = 2 (10 steps) on 1000 test images;
+time on a Colab T4.
+
+| defense | clean acc | AS fooling ↓ | UAP fooling ↓ | PGD-ℓ₂ acc ↑ | time |
+|---|---|---|---|---|---|
+| none | 97.3% | 46.5 ± 13.8% | 16.0 ± 9.6% | 29.1% | – |
+| noise (control) | 97.1% | 46.3 ± 10.5% | 23.2 ± 15.5% | 29.8% | 1.8 min |
+| **AS fine-tuning** | 93.9% | 17.2 ± 0.3% | 5.4 ± 1.8% | 35.2% | 4.8 min |
+| UAP fine-tuning | 95.7% | 26.3 ± 2.8% | 7.7 ± 0.4% | 33.2% | 19.0 min |
+| UAT (Shafahi et al.) | 93.2% | 17.1 ± 2.5% | 5.8 ± 0.2% | 38.2% | 1.8 min |
+| PGD-AT (ε = 2) | 92.4% | **11.8 ± 0.3%** | **4.0 ± 2.0%** | **67.8%** | 4.6 min |
+
+![defense baselines](figures/defense_baselines.png)
+
+- AS perturbations are a much better training signal than DeepFool-based UAPs: lower fooling for both attacks
+  and 4x less training time.
+- But AS fine-tuning is **not better than Universal Adversarial Training**: the same robustness (17% vs 17%,
+  5% vs 6%) with 0.7 points more clean accuracy, at 2.6x the training time.
+- Per-image PGD adversarial training at ε = 2 is the strongest against universal attacks too, for 1.5 points of
+  clean accuracy more than AS fine-tuning and the same training time.
+
+So on BloodMNIST the active subspace is most useful as an **explanation** of universal vulnerability (C1–C3
+above), not as a new defense. One run per defense; the UAT step size and the PGD budget were not tuned.
 
 Limits of this result: one fine-tuning run, ‖v‖₂ = 4 only, and robustness to *universal* perturbations (not to
 per-image attacks such as PGD). Natural next steps are the same experiment with several training seeds and norms,
