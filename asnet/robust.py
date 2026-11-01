@@ -169,3 +169,49 @@ def pgd_accuracy(model, X, y, eps, steps=10, bs=128):
         with torch.no_grad():
             correct += model(xa).argmax(1).eq(y[i:i + bs]).sum().item()
     return correct / len(X)
+
+
+# ---------- Phase 2: penalties on the input-gradient covariance ----------
+#
+# For a batch, G = rows g_i = grad_x loss(x_i). The batch estimate of C is G^T G / B.
+#   mode "trace":   R = tr(C_B)  = mean_i ||g_i||^2          (input-gradient regularization)
+#   mode "lambda1": R = u^T C_B u = mean_i (g_i . u)^2        with u the top eigenvector of C_B,
+#                   tracked across steps by one power-iteration step per batch (u held fixed in
+#                   the backward pass; by the envelope theorem this is the gradient of lambda_1).
+# Both need a double backward pass (create_graph=True).
+
+def spectral_finetune(model, loader, beta, mode="lambda1", epochs=5, lr=0.005, frac=0.5,
+                      device="cpu", log=print, seed=0):
+    assert mode in ("lambda1", "trace")
+    model.to(device)
+    opt, sched = _optimizer(model, lr, epochs * len(loader))
+    g_ = torch.Generator().manual_seed(seed)
+    u = None
+    _sync(device); t0 = time.time()
+    for ep in range(epochs):
+        run_ce, run_r, n = 0.0, 0.0, 0
+        for x, y in loader:
+            x, y = x.to(device), y.to(device)
+            model.train()
+            m = max(1, int(len(x) * frac))
+            xr = x[:m].clone().requires_grad_(True)
+            out_r = model(xr)
+            ce_r = F.cross_entropy(out_r, y[:m], reduction="sum")
+            g = torch.autograd.grad(ce_r, xr, create_graph=True)[0].flatten(1)   # m x D
+            if mode == "trace":
+                R = g.pow(2).sum(1).mean()
+            else:
+                with torch.no_grad():
+                    if u is None:
+                        u = torch.randn(g.shape[1], generator=g_).to(g)
+                    u = g.T @ (g @ u)          # one power-iteration step on C_B, warm start
+                    u = u / u.norm().clamp_min(1e-12)
+                R = (g @ u).pow(2).mean()
+            ce = (ce_r + F.cross_entropy(model(x[m:]), y[m:], reduction="sum")) / len(x) if m < len(x) else ce_r / m
+            loss = ce + beta * R
+            opt.zero_grad(); loss.backward(); opt.step(); sched.step()
+            run_ce += ce.item() * len(x); run_r += R.item() * len(x); n += len(x)
+        log(f"epoch {ep + 1}/{epochs}  ce {run_ce / n:.4f}  penalty ({mode}) {run_r / n:.4f}")
+    _sync(device)
+    model.eval()
+    return model, time.time() - t0

@@ -132,3 +132,17 @@ def test_input_spectrum():
     G = torch.cat(G).double()
     lam1 = (torch.linalg.svdvals(G)[0] ** 2 / len(G)).item()
     assert abs(s["lambda1"] - lam1) / lam1 < 1e-4
+
+
+def test_spectral_finetune_lowers_penalty():
+    from asnet.robust import spectral_finetune
+    from asnet.spectrum import input_spectrum
+    torch.manual_seed(0)
+    for mode in ("lambda1", "trace"):
+        model = small_cnn(image_size=32)
+        loader, X, y = _loader(n=64)
+        before = input_spectrum(model.eval(), loader)
+        spectral_finetune(model, loader, beta=50.0, mode=mode, epochs=3, lr=0.01, log=lambda *a: None)
+        after = input_spectrum(model.eval(), loader)
+        key = "lambda1" if mode == "lambda1" else "trace"
+        assert after[key] < before[key], (mode, before[key], after[key])
