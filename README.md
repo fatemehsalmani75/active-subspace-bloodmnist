@@ -198,6 +198,37 @@ per-image attacks such as PGD). Natural next steps are the same experiment with 
 a comparison with universal adversarial training based on UAP-style perturbations (Shafahi et al., AAAI 2020) and
 with PGD adversarial training, and other MedMNIST datasets.
 
+## Phase 1: does the top eigenvalue predict universal vulnerability?
+
+[`notebooks/phase1_spectrum_diagnostic.ipynb`](notebooks/phase1_spectrum_diagnostic.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/phase1_spectrum_diagnostic.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+To first order a perturbation v changes the loss by $g^\top v$ with $g = \nabla_x \ell$, and
+$\max_{\|v\|_2 \le \delta} \mathbb{E}[(g^\top v)^2] = \delta^2 \lambda_1(C)$, $C = \mathbb{E}[g g^\top]$, reached at $v = \delta u_1$.
+Prediction, written before the run: across differently trained models, universal fooling rises with $\lambda_1$;
+rule: Spearman $\rho \ge 0.8$ = supported.
+
+Six models from the same base (exact spectrum from 2000 training images; AS fooling at ‖v‖₂ = 4, 2 attack sets):
+
+| model | clean acc | $\lambda_1$ | tr C | $\lambda_1$ / tr C | AS fooling | UAP fooling |
+|---|---|---|---|---|---|---|
+| base | 96.5% | 0.152 | 0.949 | 0.160 | 52.4 ± 3.9% | 25.4 ± 24.3% |
+| noise | 96.4% | 0.165 | 1.006 | 0.164 | 54.1 ± 0.8% | 21.3 ± 11.3% |
+| UAP fine-tuning | 95.9% | 0.138 | 0.873 | 0.158 | 53.9 ± 1.1% | 13.2 ± 14.9% |
+| AS fine-tuning | 93.9% | 0.045 | 0.604 | 0.074 | 12.3 ± 0.1% | 6.2 ± 3.7% |
+| UAT | 93.5% | 0.034 | 0.503 | 0.068 | 21.8 ± 3.6% | 3.5 ± 1.3% |
+| PGD-AT | 90.4% | 0.009 | 0.053 | 0.174 | 11.0 ± 0.2% | 6.8 ± 2.8% |
+
+![phase 1](figures/phase1_spectrum.png)
+
+- $\lambda_1$ vs AS fooling: Spearman $\rho = 0.886$ (p = 0.019), so by the rule fixed in advance the hypothesis is supported.
+- But tr C gives exactly the same ranking ($\rho = 0.886$), and the share $\lambda_1$ / tr C predicts nothing
+  ($\rho = 0.03$): with these six models one cannot tell the top eigenvalue from the overall gradient size.
+- The correlation comes mostly from two groups (undefended about 53%, defended 11–22%); within the defended group
+  the order is not exact (UAT has a smaller $\lambda_1$ than AS fine-tuning but is fooled more).
+
+Phase 2 separates the two explanations by training with a penalty on $\lambda_1$ alone versus one on tr C.
+Data: [`results/phase1_spectrum.csv`](results/phase1_spectrum.csv), [`results/phase1_correlations.csv`](results/phase1_correlations.csv).
+
 ## Run it
 
 The easiest way is the Colab notebook (button above). It trains the model, plots the eigenvalue spectrum,
@@ -232,6 +263,7 @@ asnet/
   defense.py          input-space active subspace, purification, detection
   robust.py           AS fine-tuning and the baselines (UAT, UAP fine-tuning, PGD-AT)
   analysis.py         checks for the attractor class
+  spectrum.py         exact input-gradient spectrum (lambda_1, tr C)
   uap_baseline.py     UAP baseline (through the Adversarial Robustness Toolbox)
 scripts/              train / compress / attack from the command line
 notebooks/            Colab notebook with all plots
