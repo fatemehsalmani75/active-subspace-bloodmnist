@@ -229,6 +229,41 @@ Six models from the same base (exact spectrum from 2000 training images; AS fool
 Phase 2 separates the two explanations by training with a penalty on $\lambda_1$ alone versus one on tr C.
 Data: [`results/phase1_spectrum.csv`](results/phase1_spectrum.csv), [`results/phase1_correlations.csv`](results/phase1_correlations.csv).
 
+## Phase 2: penalize the top eigenvalue, or the whole trace?
+
+[`notebooks/phase2_spectral_regularization.ipynb`](notebooks/phase2_spectral_regularization.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/phase2_spectral_regularization.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+Fine-tuning from the same base with cross-entropy + $\beta R$, where $R$ is either the batch estimate of $\lambda_1(C)$
+(power iteration) or of tr C (input-gradient regularization), three $\beta$ each. Rule fixed in advance: $\lambda_1$
+matters if its models are less fooled than trace models at the same clean accuracy; the defense is useful if one
+reaches AS fooling ≤ 20% at clean accuracy ≥ 94%.
+
+| penalty | $\beta$ | clean acc | $\lambda_1$ | tr C | AS fooling | UAP fooling |
+|---|---|---|---|---|---|---|
+| $\lambda_1$ | 1 | 88.3% | 0.029 | 0.109 | 22.0 ± 1.0% | 11.8 ± 6.0% |
+| $\lambda_1$ | 3 | 87.1% | 0.010 | 0.075 | 17.0 ± 0.8% | 4.9 ± 0.0% |
+| $\lambda_1$ | 10 | 47.7% | 0.002 | 0.005 | 15.0 ± 2.2% | 5.0 ± 2.1% |
+| trace | 0.1 | 95.4% | 0.034 | 0.259 | 45.2 ± 2.5% | 22.2 ± 20.0% |
+| trace | 0.3 | 94.3% | 0.027 | 0.174 | 47.6 ± 0.7% | 29.7 ± 17.6% |
+| trace | 1 | 88.4% | 0.013 | 0.066 | 21.7 ± 3.1% | 5.4 ± 1.6% |
+
+![phase 2](figures/phase2_regularization.png)
+
+**Result: both parts of the hypothesis are rejected.**
+
+- At matched clean accuracy the two penalties give the same robustness ($\lambda_1$, $\beta = 1$: 88.3%, 22.0%;
+  trace, $\beta = 1$: 88.4%, 21.7%), so the claim that $\lambda_1$ specifically matters is dropped. The $\lambda_1$
+  penalty costs more accuracy ($\beta = 10$ collapses the model to 47.7%).
+- No $\lambda_1$-penalty model reaches AS fooling ≤ 20% at ≥ 94% clean accuracy.
+- With all 12 models (Phase 1 + 2) the Phase 1 correlation weakens: Spearman $\rho$ = 0.734 for $\lambda_1$ and
+  0.727 for tr C vs AS fooling, below the 0.8 threshold. A clear counterexample: UAT and the trace penalty with
+  $\beta = 0.1$ have the same $\lambda_1$ (0.034), the trace model even has the smaller tr C (0.26 vs 0.50), yet it is
+  fooled twice as often (45% vs 22%).
+
+So the first-order input-gradient spectrum at clean images does not determine universal vulnerability: adversarial
+fine-tuning (UAT, AS) makes models robust in a way that shrinking the gradient spectrum does not reproduce.
+Data: [`results/phase2_regularization.csv`](results/phase2_regularization.csv).
+
 ## Run it
 
 The easiest way is the Colab notebook (button above). It trains the model, plots the eigenvalue spectrum,
