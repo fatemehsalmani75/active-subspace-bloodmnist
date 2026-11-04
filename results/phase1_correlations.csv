@@ -1,0 +1,9 @@
+measure,target,spearman rho,p
+lambda1,AS fooling,0.886,0.019
+lambda1,UAP fooling,0.771,0.072
+lambda1_share,AS fooling,0.029,0.957
+lambda1_share,UAP fooling,0.6,0.208
+top5_share,AS fooling,0.486,0.329
+top5_share,UAP fooling,0.886,0.019
+trace,AS fooling,0.886,0.019
+trace,UAP fooling,0.771,0.072
