@@ -3,7 +3,8 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 checkpoints/
-results/
+results/*
+!results/*.csv
 *.npz
 *.pt
 *.pth
