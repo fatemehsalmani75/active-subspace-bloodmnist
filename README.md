@@ -98,6 +98,7 @@ The AS perturbation is concentrated in the center of the image, where the cell i
 | Can we project the active subspace out of the input, or detect the attack along it? | No: an adaptive attack still fools 28–49%, clean accuracy drops, and detection AUC stays ≤ 0.66. | [docs/defense.md §3–4](docs/defense.md#3-purification-does-not-survive-an-adaptive-attack) |
 | Does adversarial fine-tuning with AS perturbations help? | Yes (AS fooling 66% → 19%), and it transfers to UAP. It matches UAT, but PGD-AT is stronger. | [docs/defense.md §5–6](docs/defense.md#5-adversarial-fine-tuning-with-the-as-attack-works) |
 | Does the top eigenvalue $\lambda_1$ predict universal vulnerability? | Not beyond the overall gradient size; the pre-registered hypothesis is rejected. | [docs/spectrum.md](docs/spectrum.md) |
+| Do the results hold on DermaMNIST and PathMNIST, and with ResNet-18? | Running (pre-registered rules in the notebook). | [docs/spectrum.md, Phase 3](docs/spectrum.md#phase-3-do-the-results-hold-on-other-datasets-and-architectures) |
 
 ## Notebooks
 
@@ -111,6 +112,7 @@ All notebooks run on a free Colab T4 GPU and save checkpoints to Google Drive.
 | [`defense_baselines`](notebooks/defense_baselines.ipynb) | UAT, UAP fine-tuning, PGD-AT, timing |
 | [`phase1_spectrum_diagnostic`](notebooks/phase1_spectrum_diagnostic.ipynb) | $\lambda_1$ / tr C vs fooling across six models |
 | [`phase2_spectral_regularization`](notebooks/phase2_spectral_regularization.ipynb) | $\lambda_1$ penalty vs trace penalty |
+| [`phase3_multi_dataset`](notebooks/phase3_multi_dataset.ipynb) | three datasets × two architectures: attack strength, defenses, gradient-size predictor |
 
 ## Run it locally
 
@@ -132,8 +134,8 @@ BloodMNIST is downloaded automatically by the `medmnist` package.
 
 ```
 asnet/
-  data.py             BloodMNIST loaders
-  models.py           VGG-19 and a small CNN, written so they can be cut after any layer
+  data.py             MedMNIST loaders (BloodMNIST, DermaMNIST, PathMNIST)
+  models.py           VGG-19, ResNet-18 and a small CNN, written so they can be cut after any layer
   active_subspace.py  gradient covariance, frequent-directions sketch, choice of r
   pce.py              Hermite polynomial chaos layer, least-squares fit
   asnet.py            ASNet, distillation fine-tuning, l1 proximal step
@@ -142,7 +144,7 @@ asnet/
   robust.py           AS fine-tuning and the baselines (UAT, UAP fine-tuning, PGD-AT)
   analysis.py         checks for the attractor class
   spectrum.py         exact input-gradient spectrum (lambda_1, tr C)
-  uap_baseline.py     UAP baseline (through the Adversarial Robustness Toolbox)
+  uap_baseline.py     UAP (through the Adversarial Robustness Toolbox) and SGD-UAP baselines
 scripts/              train / compress / attack from the command line
 notebooks/            Colab notebooks (table above)
 results/              CSV tables of Phase 1 and Phase 2
@@ -188,8 +190,12 @@ repositories (they have no license).
 - G. Hinton, O. Vinyals, J. Dean. Distilling the Knowledge in a Neural Network, 2015.
 - A. Shafahi, M. Najibi, Z. Xu, J. Dickerson, L. S. Davis, T. Goldstein. Universal Adversarial Training. AAAI 2020.
   The AS fine-tuning loop follows the same idea, with the AS attack generating the perturbation.
-- **Data:** BloodMNIST from MedMNIST v2 (J. Yang et al., *Scientific Data* 10:41, 2023; ISBI 2021), CC BY 4.0,
-  based on A. Acevedo et al., *Data in Brief* 30:105474, 2020. The images are not included in this repository.
+- K. He, X. Zhang, S. Ren, J. Sun. Deep Residual Learning for Image Recognition. CVPR 2016.
+- A. S. Ross, F. Doshi-Velez. Improving the Adversarial Robustness and Interpretability of Deep Neural Networks by
+  Regularizing their Input Gradients. AAAI 2018. (The trace penalty is this input-gradient regularization.)
+- **Data:** BloodMNIST, DermaMNIST and PathMNIST from MedMNIST v2 (J. Yang et al., *Scientific Data* 10:41, 2023; ISBI 2021), CC BY 4.0,
+  based on A. Acevedo et al., *Data in Brief* 30:105474, 2020 (blood), HAM10000 (P. Tschandl et al., *Scientific Data* 5:180161, 2018; skin)
+  and NCT-CRC-HE-100K (J. N. Kather et al., *PLOS Medicine* 16:e1002730, 2019; colon pathology). The images are not included in this repository.
   Not for clinical use.
 
 BibTeX entries are in [`CITATION.bib`](CITATION.bib) and licenses of the dependencies in

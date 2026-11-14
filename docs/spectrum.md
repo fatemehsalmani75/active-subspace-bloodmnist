@@ -73,3 +73,25 @@ So the first-order input-gradient spectrum at clean images does not determine un
 fine-tuning (UAT, AS) makes models robust in a way that shrinking the gradient spectrum does not reproduce.
 
 Data: [`results/phase2_regularization.csv`](../results/phase2_regularization.csv).
+
+
+## Phase 3: do the results hold on other datasets and architectures?
+
+[`notebooks/phase3_multi_dataset.ipynb`](../notebooks/phase3_multi_dataset.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/phase3_multi_dataset.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+BloodMNIST, DermaMNIST and PathMNIST, each with VGG-19 and ResNet-18.
+
+- **Part A**, 18 base models (3 seeds per setting): the AS attack against UAP (DeepFool) and SGD-UAP
+  (Shafahi et al., 2020).
+- **Part B**, 36 models (seed 0): the base model plus AS fine-tuning, UAT, PGD-AT and two trace-penalty models in
+  each setting.
+
+The rules were written before the run:
+
+- **R1:** the AS attack is the stronger attack if it beats both baselines in at least 5 of 6 settings, with a
+  paired Wilcoxon test p < 0.05.
+- **R2:** tr C is a useful predictor if the median within-setting Spearman ρ is at least 0.7.
+- **R3:** the trace penalty is a competitive cheap defense if, in at least 4 of 6 settings, it comes within
+  5 points of UAT at a clean-accuracy cost of at most 2 points.
+
+Results: *running*.

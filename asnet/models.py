@@ -78,9 +78,37 @@ def small_cnn(num_classes=8, in_ch=3, image_size=64):
     return UnitNet(units, nn.Linear(500, num_classes))
 
 
+class BasicBlock(nn.Module):
+    def __init__(self, c_in, c_out, stride=1):
+        super().__init__()
+        self.body = nn.Sequential(
+            nn.Conv2d(c_in, c_out, 3, stride, 1, bias=False), nn.BatchNorm2d(c_out), nn.ReLU(inplace=True),
+            nn.Conv2d(c_out, c_out, 3, 1, 1, bias=False), nn.BatchNorm2d(c_out))
+        self.short = nn.Identity() if stride == 1 and c_in == c_out else nn.Sequential(
+            nn.Conv2d(c_in, c_out, 1, stride, bias=False), nn.BatchNorm2d(c_out))
+
+    def forward(self, x):
+        return torch.relu(self.body(x) + self.short(x))
+
+
+def resnet18(num_classes=8, in_ch=3):
+    # CIFAR-style ResNet-18 (He et al., 2016) with a 3x3 stem; a max-pool after the stem
+    # brings 64x64 inputs to 32x32 so the cost is close to VGG-19 here.
+    units = [nn.Sequential(nn.Conv2d(in_ch, 64, 3, 1, 1, bias=False), nn.BatchNorm2d(64),
+                           nn.ReLU(inplace=True), nn.MaxPool2d(2))]
+    c = 64
+    for c_out, stride in [(64, 1), (128, 2), (256, 2), (512, 2)]:
+        units += [BasicBlock(c, c_out, stride), BasicBlock(c_out, c_out)]
+        c = c_out
+    head = nn.Sequential(nn.AdaptiveAvgPool2d(1), nn.Flatten(), nn.Linear(512, num_classes))
+    return UnitNet(units, head)
+
+
 def build_model(name, num_classes=8, image_size=64):
     if name == "vgg19":
         return vgg19(num_classes)
+    if name == "resnet18":
+        return resnet18(num_classes)
     if name == "smallcnn":
         return small_cnn(num_classes, image_size=image_size)
     raise ValueError(name)

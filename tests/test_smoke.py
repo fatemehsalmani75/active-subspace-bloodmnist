@@ -146,3 +146,16 @@ def test_spectral_finetune_lowers_penalty():
         after = input_spectrum(model.eval(), loader)
         key = "lambda1" if mode == "lambda1" else "trace"
         assert after[key] < before[key], (mode, before[key], after[key])
+
+
+def test_resnet18_split_and_sgd_uap():
+    from asnet.models import resnet18
+    from asnet.uap_baseline import sgd_uap
+    model = resnet18(num_classes=7).eval()
+    _, X, y = _loader(16, size=64)
+    y = y % 7
+    pre, post, _ = split_model(model, 4, X)
+    with torch.no_grad():
+        assert torch.allclose(post(pre(X[:2])), model(X[:2]), atol=1e-5)
+    v = sgd_uap(model, X, y, delta=2.0, epochs=2, bs=8)
+    assert v.shape == X[:1].shape and v.norm() <= 2.0 + 1e-5

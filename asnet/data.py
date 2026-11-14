@@ -1,4 +1,5 @@
-# BloodMNIST (MedMNIST v2, CC BY 4.0). Downloaded by the medmnist package at runtime.
+# MedMNIST v2 datasets (CC BY 4.0), downloaded by the medmnist package at runtime.
+# BloodMNIST is the default; Phase 3 also uses DermaMNIST and PathMNIST.
 
 import torch
 from torch.utils.data import DataLoader, Subset
@@ -6,25 +7,28 @@ from torch.utils.data import DataLoader, Subset
 MEAN = (0.5, 0.5, 0.5)
 STD = (0.5, 0.5, 0.5)
 X_MIN, X_MAX = -1.0, 1.0   # range of normalized images
-NUM_CLASSES = 8
+NUM_CLASSES = 8          # BloodMNIST
+CLASSES = {"bloodmnist": 8, "dermamnist": 7, "pathmnist": 9}
 
 
 def _label(y):
     return torch.as_tensor(y).long().view(-1)[0]
 
 
-def get_datasets(size=64, root=None, augment=False):
+def get_datasets(size=64, root=None, augment=False, name="bloodmnist"):
+    import medmnist
     import torchvision.transforms as T
-    from medmnist import BloodMNIST
+
+    cls = getattr(medmnist, medmnist.INFO[name]["python_class"])
 
     norm = [T.ToTensor(), T.Normalize(MEAN, STD)]
     flips = [T.RandomHorizontalFlip(), T.RandomVerticalFlip()] if augment else []
     kw = dict(download=True, size=size, target_transform=_label)
     if root:
         kw["root"] = root
-    train = BloodMNIST(split="train", transform=T.Compose(flips + norm), **kw)
-    val = BloodMNIST(split="val", transform=T.Compose(norm), **kw)
-    test = BloodMNIST(split="test", transform=T.Compose(norm), **kw)
+    train = cls(split="train", transform=T.Compose(flips + norm), **kw)
+    val = cls(split="val", transform=T.Compose(norm), **kw)
+    test = cls(split="test", transform=T.Compose(norm), **kw)
     return train, val, test
 
 
