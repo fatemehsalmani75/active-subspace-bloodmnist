@@ -113,6 +113,7 @@ All notebooks run on a free Colab T4 GPU and save checkpoints to Google Drive.
 | [`phase1_spectrum_diagnostic`](notebooks/phase1_spectrum_diagnostic.ipynb) | $\lambda_1$ / tr C vs fooling across six models |
 | [`phase2_spectral_regularization`](notebooks/phase2_spectral_regularization.ipynb) | $\lambda_1$ penalty vs trace penalty |
 | [`phase3_multi_dataset`](notebooks/phase3_multi_dataset.ipynb) | three datasets × two architectures: attack strength, defenses, gradient-size predictor |
+| [`phase4_shifted_spectrum`](notebooks/phase4_shifted_spectrum.ipynb) | spectrum after moving along the active direction vs universal fooling (36 models) |
 
 ## Run it locally
 

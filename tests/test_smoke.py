@@ -159,3 +159,16 @@ def test_resnet18_split_and_sgd_uap():
         assert torch.allclose(post(pre(X[:2])), model(X[:2]), atol=1e-5)
     v = sgd_uap(model, X, y, delta=2.0, epochs=2, bs=8)
     assert v.shape == X[:1].shape and v.norm() <= 2.0 + 1e-5
+
+
+def test_shifted_spectrum():
+    from asnet.spectrum import input_spectrum, shifted_spectrum
+    model = small_cnn(image_size=32).eval()
+    loader, X, y = _loader()
+    clean = input_spectrum(model, loader, return_top_vector=True)
+    assert clean["u1"].shape == (3 * 32 * 32,)
+    s0 = shifted_spectrum(model, loader, radius=0.0, u1=clean["u1"])
+    assert abs(s0["lambda1"] - clean["lambda1"]) / clean["lambda1"] < 1e-4   # radius 0 = clean
+    for d in ("active", "random"):
+        s = shifted_spectrum(model, loader, radius=2.0, direction=d, u1=clean["u1"])
+        assert 0 < s["lambda1"] <= s["trace"] + 1e-6

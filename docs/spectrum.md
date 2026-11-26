@@ -148,3 +148,20 @@ this row says little about attacks.
 
 Data: [`results/phase3_attacks.csv`](../results/phase3_attacks.csv),
 [`results/phase3_defenses.csv`](../results/phase3_defenses.csv).
+
+## Phase 4: sensitivity on the δ-ball, not at the clean point
+
+[`notebooks/phase4_shifted_spectrum.ipynb`](../notebooks/phase4_shifted_spectrum.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/phase4_shifted_spectrum.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+To second order, ℓ(x+v) − ℓ(x) ≈ gᵀv + ½ vᵀHv, and a clean-point spectrum sees only g.
+
+**Hypothesis.** Universal vulnerability is set by $\lambda_1$ of the gradient covariance measured after moving
+each image by ±δ along the clean top eigenvector $u_1$. No attack is run to compute it. The 36 Phase 3 models
+are measured; nothing is retrained.
+
+The rules were written before the run, and DermaMNIST/VGG-19 is excluded because the model did not learn:
+
+- **H1:** the median within-setting Spearman ρ is at least 0.7.
+- **H2:** this measure beats the clean-point $\lambda_1$ in at least 4 of 5 settings.
+
+Results: *running*.
