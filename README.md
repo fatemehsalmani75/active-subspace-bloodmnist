@@ -98,7 +98,7 @@ The AS perturbation is concentrated in the center of the image, where the cell i
 | Can we project the active subspace out of the input, or detect the attack along it? | No: an adaptive attack still fools 28–49%, clean accuracy drops, and detection AUC stays ≤ 0.66. | [docs/defense.md §3–4](docs/defense.md#3-purification-does-not-survive-an-adaptive-attack) |
 | Does adversarial fine-tuning with AS perturbations help? | Yes (AS fooling 66% → 19%), and it transfers to UAP. It matches UAT, but PGD-AT is stronger. | [docs/defense.md §5–6](docs/defense.md#5-adversarial-fine-tuning-with-the-as-attack-works) |
 | Does the top eigenvalue $\lambda_1$ predict universal vulnerability? | Not beyond the overall gradient size; the pre-registered hypothesis is rejected. | [docs/spectrum.md](docs/spectrum.md) |
-| Do the results hold on DermaMNIST and PathMNIST, and with ResNet-18? | Running (pre-registered rules in the notebook). | [docs/spectrum.md, Phase 3](docs/spectrum.md#phase-3-do-the-results-hold-on-other-datasets-and-architectures) |
+| Do the results hold on DermaMNIST and PathMNIST, and with ResNet-18? | Partly: the AS attack beats UAP in all 18 runs and is the most stable attack, but it does not beat SGD-UAP; no spectral quantity predicts vulnerability; UAT and PGD-AT stay the best defenses. | [docs/spectrum.md, Phase 3](docs/spectrum.md#phase-3-do-the-results-hold-on-other-datasets-and-architectures) |
 
 ## Notebooks
 

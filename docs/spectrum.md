@@ -94,4 +94,57 @@ The rules were written before the run:
 - **R3:** the trace penalty is a competitive cheap defense if, in at least 4 of 6 settings, it comes within
   5 points of UAT at a clean-accuracy cost of at most 2 points.
 
-Results: *running*.
+Decision ([`results/phase3_decision.txt`](../results/phase3_decision.txt)): **none of the three rules is met.**
+
+**Part A, attack strength** (fooling at δ = 4, mean ± std over 3 seeds):
+
+| setting | clean acc | balanced acc | AS | UAP | SGD-UAP |
+|---|---|---|---|---|---|
+| BloodMNIST, ResNet-18 | 98.2% | 98.2% | 76.4 ± 2.2% | 27.4 ± 33.7% | 56.2 ± 19.4% |
+| BloodMNIST, VGG-19 | 96.4% | 96.3% | 66.0 ± 6.1% | 41.9 ± 25.4% | 65.3 ± 8.0% |
+| DermaMNIST, ResNet-18 | 75.1% | 44.6% | 72.9 ± 21.3% | 51.0 ± 40.6% | 76.4 ± 18.7% |
+| DermaMNIST, VGG-19 † | 70.2% | 27.3% | 10.4 ± 2.9% | 8.2 ± 4.4% | 12.5 ± 7.1% |
+| PathMNIST, ResNet-18 | 84.9% | 81.2% | 71.4 ± 5.4% | 52.5 ± 9.2% | 65.6 ± 19.6% |
+| PathMNIST, VGG-19 | 87.7% | 85.6% | 64.2 ± 5.2% | 45.2 ± 7.9% | 59.2 ± 21.5% |
+
+† VGG-19 did not learn DermaMNIST (balanced accuracy 27%, close to always predicting the majority class), so
+this row says little about attacks.
+
+![phase 3 attacks](../figures/phase3_attacks.png)
+
+- **R1 not met.** The AS attack beats UAP in all 18 runs (Wilcoxon p < 0.0001), but not SGD-UAP (7 of 18 runs,
+  p = 0.38).
+- *Exploratory, not pre-registered:* the AS attack is much more stable across seeds. Its standard deviation,
+  averaged over settings, is 7 points, against 20 for UAP and 16 for SGD-UAP.
+
+**Part B, defenses** (AS fooling / clean accuracy, seed 0):
+
+| setting | base | AS fine-tuning | UAT | PGD-AT | trace β=0.1 | trace β=1 |
+|---|---|---|---|---|---|---|
+| BloodMNIST, ResNet-18 | 78.1 / 98.2 | 17.3 / 97.0 | 8.9 / 96.6 | 11.1 / 95.0 | 53.0 / 97.9 | 20.3 / 90.1 |
+| BloodMNIST, VGG-19 | 64.0 / 95.9 | 22.1 / 94.1 | 17.8 / 93.4 | 14.0 / 89.0 | 35.3 / 95.1 | 33.1 / 78.9 |
+| DermaMNIST, ResNet-18 | 97.1 / 76.3 | 24.3 / 74.7 | 12.7 / 73.8 | 8.0 / 71.1 | 65.2 / 76.1 | 11.5 / 72.4 |
+| PathMNIST, ResNet-18 | 67.4 / 83.5 | 39.4 / 84.0 | 10.4 / 77.4 | 15.3 / 83.5 | 56.5 / 86.1 | 38.4 / 76.8 |
+| PathMNIST, VGG-19 | 61.6 / 86.1 | 7.9 / 86.2 | 6.8 / 85.3 | 15.5 / 81.8 | 45.3 / 81.8 | 19.4 / 51.6 |
+
+- **R3 not met.** The trace penalty is close to UAT at low accuracy cost in only 1 of 6 settings. UAT and PGD-AT
+  are the strongest defenses. AS fine-tuning cuts AS fooling sharply everywhere, but it stays behind UAT on
+  ResNet-18.
+
+**Gradient-size predictor**
+
+![phase 3 predictor](../figures/phase3_predictor.png)
+
+- **R2 not met.** The median within-setting Spearman ρ is 0.43 for tr C and 0.46 for $\lambda_1$
+  ([`results/phase3_correlations.csv`](../results/phase3_correlations.csv)).
+- The models do not line up on one curve. At the same tr C, fooling ranges from under 10% to over 60%.
+
+**Conclusion.** Across three datasets and two architectures:
+
+- the AS attack is consistently stronger than DeepFool-based UAP and more stable than both baselines, but it is
+  not stronger than SGD-UAP;
+- neither the top eigenvalue nor the trace of the input-gradient covariance explains universal vulnerability;
+- adversarial training with universal (UAT) or per-image (PGD) perturbations remains the reliable defense.
+
+Data: [`results/phase3_attacks.csv`](../results/phase3_attacks.csv),
+[`results/phase3_defenses.csv`](../results/phase3_defenses.csv).
