@@ -99,6 +99,7 @@ The AS perturbation is concentrated in the center of the image, where the cell i
 | Does adversarial fine-tuning with AS perturbations help? | Yes (AS fooling 66% → 19%), and it transfers to UAP. It matches UAT, but PGD-AT is stronger. | [docs/defense.md §5–6](docs/defense.md#5-adversarial-fine-tuning-with-the-as-attack-works) |
 | Does the top eigenvalue $\lambda_1$ predict universal vulnerability? | Not beyond the overall gradient size; the pre-registered hypothesis is rejected. | [docs/spectrum.md](docs/spectrum.md) |
 | Do the results hold on DermaMNIST and PathMNIST, and with ResNet-18? | Partly: the AS attack beats UAP in all 18 runs and is the most stable attack, but it does not beat SGD-UAP; no spectral quantity predicts vulnerability; UAT and PGD-AT stay the best defenses. | [docs/spectrum.md, Phase 3](docs/spectrum.md#phase-3-do-the-results-hold-on-other-datasets-and-architectures) |
+| What does explain universal vulnerability? | How much the input-gradient sensitivity grows along the top active direction: λ1 measured at x ± δu1 predicts universal fooling, and adversarial training removes this growth while gradient penalties do not. Pre-registered and confirmed on held-out models (OrganAMNIST + 12 earlier models). | [docs/spectrum.md, Phases 4–5](docs/spectrum.md#phase-5-confirmatory-test-on-models-not-seen-before) |
 
 ## Notebooks
 

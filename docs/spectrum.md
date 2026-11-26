@@ -204,4 +204,34 @@ The rules were written before the run:
 - **C2:** the shifted $\lambda_1$ reaches ρ ≥ 0.7 with AS fooling, and beats the clean $\lambda_1$, in at least
   2 of 3 groups.
 
-Results: *running*.
+Decision ([`results/phase5_decision.txt`](../results/phase5_decision.txt)): **confirmed.**
+
+| held-out group | n | median A, adversarial | median A, non-adversarial | ρ shifted $\lambda_1$ | ρ clean $\lambda_1$ | median A, random shift |
+|---|---|---|---|---|---|---|
+| BloodMNIST VGG-19 (Phases 1–2) | 12 | 7.8 | 13.4 | **0.83** | 0.73 | 1.02 |
+| OrganAMNIST ResNet-18 | 6 | 1.1 | 4.8 | **0.94** | 0.83 | 1.19 |
+| OrganAMNIST VGG-19 | 6 | 1.2 | 44.9 | **0.83** | 0.71 | 0.99 |
+
+- **C1 met (3/3).** In every group, adversarially trained models have lower amplification. Pooled one-sided
+  Mann–Whitney over 24 models: p = 0.014.
+- **C2 met (3/3).** The shifted $\lambda_1$ reaches ρ ≥ 0.7 and beats the clean $\lambda_1$ in every group.
+- **Random-shift control.** A shift of the same norm in a random direction leaves $\lambda_1$ unchanged
+  (median ×1.02).
+
+![phase 5](../figures/phase5_confirmatory.png)
+
+Caveats:
+
+- The groups are small (6, 6 and 12 models).
+- Strong penalties without adversarial training also have a low A, but they pay for it in accuracy (for example,
+  $\lambda_1$, β = 10: A = 1.3 at 48% clean accuracy).
+- UAP fine-tuning did not make the model robust (54% fooled), and its A stayed high (×23). This fits the mechanism,
+  but it means the "adversarial" label alone is a coarse grouping.
+
+**Summary of Phases 1–5.** Clean-point spectral quantities ($\lambda_1$, tr C) do not explain universal
+vulnerability. What matters is how much the input-gradient sensitivity grows when an image moves along the top
+active direction. Gradient penalties lower the sensitivity at clean points but not this growth. Adversarial
+training removes it, and the shifted $\lambda_1$ predicts universal fooling across datasets and architectures,
+including on held-out models.
+
+Data: [`results/phase5_models.csv`](../results/phase5_models.csv), [`results/phase5_groups.csv`](../results/phase5_groups.csv).
