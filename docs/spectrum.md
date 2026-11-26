@@ -164,4 +164,24 @@ The rules were written before the run, and DermaMNIST/VGG-19 is excluded because
 - **H1:** the median within-setting Spearman ρ is at least 0.7.
 - **H2:** this measure beats the clean-point $\lambda_1$ in at least 4 of 5 settings.
 
-Results: *running*.
+Decision ([`results/phase4_decision.txt`](../results/phase4_decision.txt)): **rejected by the pre-registered rule, narrowly.**
+
+- **H1 not met.** The median within-setting ρ is 0.657, against a threshold of 0.7.
+- **H2 met.** The shifted measure beats the clean-point $\lambda_1$ in 4 of 5 settings, with medians 0.66 vs 0.54.
+- **H3.** The shifted measure orders UAT against trace β = 0.1 correctly in 4 of 5 settings.
+
+![phase 4](../figures/phase4_shifted_spectrum.png)
+
+**Exploratory observations (not pre-registered; to be confirmed on new models):**
+
+- **Pooled over the 30 models,** Spearman ρ with AS fooling is 0.44 for the clean $\lambda_1$ and 0.68 for the
+  shifted $\lambda_1$.
+- **A random shift of the same norm changes nothing.** $\lambda_1$ stays within 0.6–1.2 times its clean value. The
+  growth is specific to the active direction.
+- **Amplification by model type.** The amplification $\lambda_1(C_\delta)/\lambda_1(C)$ is large for base models
+  (median ×21) and for the weak gradient penalty, trace β = 0.1 (×14). It is small for the adversarially trained
+  models: AS fine-tuning ×3.1, UAT ×4.6, PGD-AT ×4.7. This is the mechanism suggested in the hypothesis: a
+  gradient penalty lowers the sensitivity at the clean point but not its growth along the active direction.
+
+Data: [`results/phase4_spectra.csv`](../results/phase4_spectra.csv),
+[`results/phase4_correlations.csv`](../results/phase4_correlations.csv).
