@@ -185,3 +185,23 @@ Decision ([`results/phase4_decision.txt`](../results/phase4_decision.txt)): **re
 
 Data: [`results/phase4_spectra.csv`](../results/phase4_spectra.csv),
 [`results/phase4_correlations.csv`](../results/phase4_correlations.csv).
+
+## Phase 5: confirmatory test on models not seen before
+
+[`notebooks/phase5_confirmatory.ipynb`](../notebooks/phase5_confirmatory.ipynb) <a href="https://colab.research.google.com/github/fatemehsalmani75/active-subspace-bloodmnist/blob/main/notebooks/phase5_confirmatory.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
+The Phase 4 observations are tested on three held-out groups:
+
+- OrganAMNIST with VGG-19 (new dataset, new models);
+- OrganAMNIST with ResNet-18;
+- the 12 BloodMNIST models of Phases 1–2.
+
+The quantity tested is the amplification $A = \lambda_1(C_\delta)/\lambda_1(C)$.
+
+The rules were written before the run:
+
+- **C1:** adversarially trained models have a lower median $A$ than non-adversarial ones, in all 3 groups.
+- **C2:** the shifted $\lambda_1$ reaches ρ ≥ 0.7 with AS fooling, and beats the clean $\lambda_1$, in at least
+  2 of 3 groups.
+
+Results: *running*.

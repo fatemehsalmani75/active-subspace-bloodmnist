@@ -114,6 +114,7 @@ All notebooks run on a free Colab T4 GPU and save checkpoints to Google Drive.
 | [`phase2_spectral_regularization`](notebooks/phase2_spectral_regularization.ipynb) | $\lambda_1$ penalty vs trace penalty |
 | [`phase3_multi_dataset`](notebooks/phase3_multi_dataset.ipynb) | three datasets × two architectures: attack strength, defenses, gradient-size predictor |
 | [`phase4_shifted_spectrum`](notebooks/phase4_shifted_spectrum.ipynb) | spectrum after moving along the active direction vs universal fooling (36 models) |
+| [`phase5_confirmatory`](notebooks/phase5_confirmatory.ipynb) | confirmatory test of the Phase 4 amplification on held-out models (OrganAMNIST + Phases 1–2) |
 
 ## Run it locally
 

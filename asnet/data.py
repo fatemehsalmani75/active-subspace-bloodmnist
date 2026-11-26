@@ -1,5 +1,6 @@
 # MedMNIST v2 datasets (CC BY 4.0), downloaded by the medmnist package at runtime.
-# BloodMNIST is the default; Phase 3 also uses DermaMNIST and PathMNIST.
+# BloodMNIST is the default; Phase 3 also uses DermaMNIST and PathMNIST, Phase 5 OrganAMNIST
+# (grayscale, loaded as 3 identical channels so the same networks apply).
 
 import torch
 from torch.utils.data import DataLoader, Subset
@@ -8,7 +9,7 @@ MEAN = (0.5, 0.5, 0.5)
 STD = (0.5, 0.5, 0.5)
 X_MIN, X_MAX = -1.0, 1.0   # range of normalized images
 NUM_CLASSES = 8          # BloodMNIST
-CLASSES = {"bloodmnist": 8, "dermamnist": 7, "pathmnist": 9}
+CLASSES = {"bloodmnist": 8, "dermamnist": 7, "pathmnist": 9, "organamnist": 11}
 
 
 def _label(y):
@@ -23,7 +24,7 @@ def get_datasets(size=64, root=None, augment=False, name="bloodmnist"):
 
     norm = [T.ToTensor(), T.Normalize(MEAN, STD)]
     flips = [T.RandomHorizontalFlip(), T.RandomVerticalFlip()] if augment else []
-    kw = dict(download=True, size=size, target_transform=_label)
+    kw = dict(download=True, size=size, target_transform=_label, as_rgb=True)
     if root:
         kw["root"] = root
     train = cls(split="train", transform=T.Compose(flips + norm), **kw)
